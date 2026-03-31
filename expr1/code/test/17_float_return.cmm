@@ -1,0 +1,5 @@
+int main()
+{
+  float y = 3.14;
+  return y;
+}

@@ -1,0 +1,11 @@
+struct A
+{
+  int x;
+};
+
+int main()
+{
+  struct A a;
+  int b[10];
+  while (1) a.x = b[2];
+}

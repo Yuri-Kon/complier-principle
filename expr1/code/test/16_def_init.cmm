@@ -1,0 +1,6 @@
+int main()
+{
+  int a, b;
+  int x = 1;
+  x = x + 2;
+}
