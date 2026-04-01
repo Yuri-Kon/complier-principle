@@ -38,12 +38,22 @@ static int first_line(TreeNode* a, TreeNode* b, TreeNode* c, TreeNode* d) {
 %token <node> LP RP LB RB LC RC
 %token <node> STRUCT RETURN IF ELSE WHILE
 
-%type <node> Program ExtDefList ExtDef Specifier FunDec CompSt
+%type <node> Program ExtDefList ExtDef Specifier StructSpecifier FunDec CompSt
 %type <node> DefList Def DecList Dec VarDec
 %type <node> StmtList Stmt Exp
+%type <node> OptTag Tag
 
 %right ASSIGNOP
+%left OR
+%left AND
+%left RELOP
+%left STAR DIV
 %left PLUS
+%right NOT
+%right UMINUS
+%left LB RB DOT
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE
 
 %%
 
@@ -78,6 +88,12 @@ ExtDef
         add_child($$, $2);
         add_child($$, $3);
       }
+    | Specifier SEMI
+      {
+        $$ = make_node("ExtDef", first_line($1, $2, NULL, NULL));
+        add_child($$, $1);
+        add_child($$, $2);
+      }
     ;
 Specifier
     : TYPE
@@ -85,7 +101,50 @@ Specifier
         $$ = make_node("Specifier", first_line($1, NULL, NULL, NULL));
         add_child($$, $1);  
       }
+    | StructSpecifier
+      {
+        $$ = make_node("Specifier", first_line($1, NULL, NULL, NULL));
+        add_child($$, $1);
+      }
     ;
+StructSpecifier
+    : STRUCT OptTag LC DefList RC
+      {
+        $$ = make_node("StructSpecifier", first_line($1, $2, $3, $4));
+        add_child($$, $1);
+        add_child($$, $2);
+        add_child($$, $3);
+        add_child($$, $4);
+        add_child($$, $5);
+       }
+         | STRUCT Tag
+      {
+          $$ = make_node("StructSpecifier", first_line($1, $2, NULL, NULL));
+          add_child($$, $1);
+          add_child($$, $2);
+      }
+    ;
+
+OptTag
+    : ID
+      {
+          $$ = make_node("OptTag", first_line($1, NULL, NULL, NULL));
+          add_child($$, $1);
+      }
+    | /* empty */
+      {
+          $$ = NULL;
+      }
+    ;
+
+Tag
+    : ID
+      {
+          $$ = make_node("Tag", first_line($1, NULL, NULL, NULL));
+          add_child($$, $1);
+      }
+    ;
+
 FunDec
     : ID LP RP
       {
@@ -165,6 +224,14 @@ VarDec
           $$ = make_node("VarDec", first_line($1, NULL, NULL, NULL));
           add_child($$, $1);
       }
+    | VarDec LB INT RB
+      {
+          $$ = make_node("VarDec", first_line($1, $2, $3, $4));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+          add_child($$, $4);
+      }
     ;
 
 StmtList
@@ -193,7 +260,41 @@ Stmt
         add_child($$, $2);
 	add_child($$, $3);
       };
-
+      | CompSt
+       {
+         $$ = make_node("Stmt", first_line($1, NULL, NULL, NULL));
+         add_child($$, $1);      
+       }
+      | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE
+       {
+          $$ = make_node("Stmt", first_line($1, $2, $3, $4));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+          add_child($$, $4);
+          add_child($$, $5);       
+       }
+    | IF LP Exp RP Stmt ELSE Stmt
+      {
+          $$ = make_node("Stmt", first_line($1, $2, $3, $4));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+          add_child($$, $4);
+          add_child($$, $5);
+          add_child($$, $6);
+          add_child($$, $7);
+      }
+    | WHILE LP Exp RP Stmt
+      {
+          $$ = make_node("Stmt", first_line($1, $2, $3, $4));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+          add_child($$, $4);
+          add_child($$, $5);
+      }
+    ;
 
 Exp
     : ID
@@ -205,12 +306,34 @@ Exp
       {
           $$ = make_node("Exp", first_line($1, NULL, NULL, NULL));
           add_child($$, $1);
-    }
-    | FLOAT {
-      $$ = make_node("Exp", first_line($1, NULL, NULL, NULL));
-      add_child($$, $1);
-    }
+      }
+    | FLOAT
+      {
+          $$ = make_node("Exp", first_line($1, NULL, NULL, NULL));
+          add_child($$, $1);
+      }
     | Exp ASSIGNOP Exp
+      {
+          $$ = make_node("Exp", first_line($1, $2, $3, NULL));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+      }
+    | Exp OR Exp
+      {
+          $$ = make_node("Exp", first_line($1, $2, $3, NULL));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+      }
+    | Exp AND Exp
+      {
+          $$ = make_node("Exp", first_line($1, $2, $3, NULL));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+      }
+    | Exp RELOP Exp
       {
           $$ = make_node("Exp", first_line($1, $2, $3, NULL));
           add_child($$, $1);
@@ -223,19 +346,56 @@ Exp
           add_child($$, $1);
           add_child($$, $2);
           add_child($$, $3);
-    }
-    | LP Exp RP {
-      $$ = make_node("Exp", first_line($1, $2, $3, NULL));
-      add_child($$, $1);
-      add_child($$, $2);
-      add_child($$, $3);
-    }
-    | MINUS Exp %prec UMINUS {
-      $$ = make_node("Exp", first_line($1, $2, NULL, NULL));
-      add_child($$, $1);
-      add_child($$, $2);
-    }
-;
+      }
+    | Exp STAR Exp
+      {
+          $$ = make_node("Exp", first_line($1, $2, $3, NULL));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+      }
+    | Exp DIV Exp
+      {
+          $$ = make_node("Exp", first_line($1, $2, $3, NULL));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+      }
+    | LP Exp RP
+      {
+          $$ = make_node("Exp", first_line($1, $2, $3, NULL));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+      }
+    | MINUS Exp %prec UMINUS
+      {
+          $$ = make_node("Exp", first_line($1, $2, NULL, NULL));
+          add_child($$, $1);
+          add_child($$, $2);
+      }
+    | NOT Exp
+      {
+          $$ = make_node("Exp", first_line($1, $2, NULL, NULL));
+          add_child($$, $1);
+          add_child($$, $2);
+      }
+    | Exp LB Exp RB
+      {
+          $$ = make_node("Exp", first_line($1, $2, $3, $4));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+          add_child($$, $4);
+      }
+    | Exp DOT ID
+      {
+          $$ = make_node("Exp", first_line($1, $2, $3, NULL));
+          add_child($$, $1);
+          add_child($$, $2);
+          add_child($$, $3);
+      }
+    ;
 %%
 
 void yyerror(const char* msg) {

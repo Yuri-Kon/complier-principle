@@ -1,0 +1,6 @@
+int main()
+{
+  int a[10];
+  int i;
+  i = a[2];
+}

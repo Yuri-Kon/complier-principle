@@ -1,0 +1,7 @@
+int main()
+{
+  int a;
+  int b;
+  if (a == b) a = 1;
+  if (a > 0 && b < 3) b = 2;
+}
