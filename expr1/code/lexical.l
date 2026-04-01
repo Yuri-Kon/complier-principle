@@ -12,7 +12,7 @@ int last_error_line = -1;
 
 %}
 
-%x SKIPLINE
+%x COMMENT SKIPLINE
 
 DIGIT      [0-9]
 NZDIGIT    [1-9]
@@ -50,7 +50,11 @@ WS         [ \t\r]+
 "+"                         { yylval.node = new_token_node("PLUS", yylineno); return PLUS; }
 "-"                         { yylval.node = new_token_node("MINUS", yylineno); return MINUS; }
 "*"                         { yylval.node = new_token_node("STAR", yylineno); return STAR; }
+
+"//"[^\n]*                  { /* 忽略单行注释 */ }
+"/*"                        { BEGIN(COMMENT); }
 "/"                         { yylval.node = new_token_node("DIV", yylineno); return DIV; }
+
 "&&"                        { yylval.node = new_token_node("AND", yylineno); return AND; }
 "||"                        { yylval.node = new_token_node("OR", yylineno); return OR; }
 "."                         { yylval.node = new_token_node("DOT", yylineno); return DOT; }
@@ -135,6 +139,19 @@ WS         [ \t\r]+
                                 BEGIN(SKIPLINE);
                                 yylval.node = new_int_node("INT", yylineno, 0);
                                 return INT;
+                            }
+
+<COMMENT>"*/"               { BEGIN(INITIAL); }
+<COMMENT>\n                 { }
+<COMMENT>.                  { }
+<COMMENT><<EOF>>            {
+                                lexical_error = 1;
+                                if (last_error_line != yylineno) {
+                                    printf("Error type A at Line %d: Unterminated comment.\n", yylineno);
+                                    last_error_line = yylineno;
+                                }
+                                BEGIN(INITIAL);
+                                return 0;
                             }
 <SKIPLINE>[^;\n]+    { }
 <SKIPLINE>";"        { BEGIN(INITIAL); yylval.node = new_token_node("SEMI", yylineno); return SEMI; }
