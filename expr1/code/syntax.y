@@ -31,13 +31,12 @@ static int first_line(TreeNode* a, TreeNode* b, TreeNode* c, TreeNode* d) {
     TreeNode* node;
 }
 
-%token <node> ID TYPE INT FLOAT
-%token <node> SEMI COMMA ASSIGNOP RELOP
-%token <node> PLUS MINUS STAR DIV
-%token <node> AND OR DOT NOT
-%token <node> LP RP LB RB LC RC
-%token <node> STRUCT RETURN IF ELSE WHILE
-
+%token<node> ID TYPE INT FLOAT 
+%token<node> SEMI COMMA ASSIGNOP RELO 
+%token<node> PLUS MINUS STAR DIV
+%token<node> AND OR DOT NOT
+%token<node> LP RP LB RB LC RC
+%token<node> STRUCT RETURN IF ELSE WHILE
 %type <node> Program ExtDefList ExtDef Specifier StructSpecifier FunDec CompSt
 %type <node> DefList Def DecList Dec VarDec
 %type <node> StmtList Stmt Exp
