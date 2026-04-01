@@ -1,14 +1,30 @@
-%option noyywrap yylineno
+%option noyywrap yylineno noinput nounput
 
 %{
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "syntax.tab.h"
 #include "tree.h"
 
+YYLTYPE yyloc;
+  
 int lexical_error = 0;
 int last_error_line = -1;
+
+static float parse_float_literal(const char *text) {
+  char buf[128];
+  int j = 0;
+
+  for (int i = 0; text[i] != '\0' && j < (int)sizeof(buf) - 1; ++i) {
+    if (!isspace((unsigned char)text[i])) {
+      buf[j++] = text[i];
+    }
+  }
+  buf[j] = '\0';
+  return (float)atof(buf);
+}
 
 %}
 
@@ -28,8 +44,9 @@ BAD_HEX    0[xX][0-9a-fA-F]*[g-zG-Z_][A-Za-z0-9_]*
 
 FLOATNUM   ({DIGIT}+"."{DIGIT}*|{DIGIT}*"."{DIGIT}+)
 EXP        [eE][+-]?{DIGIT}+
-FLOAT_EXP  ({FLOATNUM}|{INT10}){EXP}
-BAD_EXP    ({FLOATNUM}|{INT10})[eE][+-]?
+EXP_WS     [eE][ \t\r]*[+-]?[ \t\r]*{DIGIT}+
+FLOAT_EXP  ({FLOATNUM}|{INT10})({EXP}|{EXP_WS})
+BAD_EXP    ({FLOATNUM}|{INT10})[eE][ \t\r]*[+-]?[ \t\r]*
 
 WS         [ \t\r]+
 
@@ -87,7 +104,7 @@ WS         [ \t\r]+
                             }
 
 {FLOAT_EXP}                 {
-                                yylval.node = new_float_node("FLOAT", yylineno, (float)atof(yytext));
+                                yylval.node = new_float_node("FLOAT", yylineno, parse_float_literal(yytext));
                                 return FLOAT;
                             }
 
