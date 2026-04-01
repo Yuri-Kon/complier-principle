@@ -2,28 +2,35 @@
 
 %{
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <stdlib.h>
 #include "syntax.tab.h"
 #include "tree.h"
 
 int lexical_error = 0;
+int last_error_line = -1;
+
 %}
+
+%x SKIPLINE
 
 DIGIT      [0-9]
 NZDIGIT    [1-9]
 LETTER     [A-Za-z_]
 IDN        {LETTER}({LETTER}|{DIGIT})*
-INT10      0|[1-9]{DIGIT}*
+
+INT10      0|{NZDIGIT}{DIGIT}*
 OCT        0[0-7]+
-HEX        0[xX][0-9a-fA-F]*[g-zG-Z_][A-Za-z0-9_]*
+HEX        0[xX][0-9a-fA-F]+
+
 BAD_OCT    0[0-9]*[89][0-9]*
 BAD_HEX    0[xX][0-9a-fA-F]*[g-zG-Z_][A-Za-z0-9_]*
+
 FLOATNUM   ({DIGIT}+"."{DIGIT}*|{DIGIT}*"."{DIGIT}+)
 EXP        [eE][+-]?{DIGIT}+
 FLOAT_EXP  ({FLOATNUM}|{INT10}){EXP}
 BAD_EXP    ({FLOATNUM}|{INT10})[eE][+-]?
+
 WS         [ \t\r]+
 
 %%
@@ -57,12 +64,22 @@ WS         [ \t\r]+
 
 {BAD_HEX}                   {
                                 lexical_error = 1;
-                                printf("Error type A at Line %d: Illegal hexadecimal number \"%s\".\n", yylineno, yytext);
+                                if (last_error_line != yylineno) {
+                                  printf("Error type A at Line %d: Illegal hexadecimal number \"%s\".\n", yylineno, yytext);
+                                  last_error_line = yylineno;}
+                                BEGIN(SKIPLINE);
+                                yylval.node = new_int_node("INT", yylineno, 0);
                             }
 
 {BAD_OCT}                   {
                                 lexical_error = 1;
-                                printf("Error type A at Line %d: Illegal octal number \"%s\".\n", yylineno, yytext);
+                                if (last_error_line != yylineno) {
+                                  printf("Error type A at Line %d: Illegal octal number \"%s\".\n", yylineno, yytext);
+                                  last_error_line = yylineno;
+                                }
+                                BEGIN(SKIPLINE);
+                                yylval.node = new_int_node("INT", yylineno, 0);
+                                return INT;
                             }
 
 {FLOAT_EXP}                 {
@@ -72,7 +89,13 @@ WS         [ \t\r]+
 
 {BAD_EXP}                   {
                                 lexical_error = 1;
-                                printf("Error type A at Line %d: Illegal floating point number \"%s\".\n", yylineno, yytext);
+                                if (last_error_line != yylineno) {
+                                  printf("Error type A at Line %d: Illegal floating point number \"%s\".\n", yylineno, yytext);
+                                  last_error_line = yylineno;
+                                }
+                                BEGIN(SKIPLINE);
+                                yylval.node = new_int_node("FLOAT", yylineno, 0.0f);
+                                return FLOAT;
                             }
 
 {HEX}                       {
@@ -105,6 +128,16 @@ WS         [ \t\r]+
 
 .                           {
                                 lexical_error = 1;
-                                printf("Error type A at Line %d: Mysterious character \"%s\".\n", yylineno, yytext);
+                                if (last_error_line != yylineno) {
+                                  printf("Error type A at Line %d: Mysterious character \"%s\".\n", yylineno, yytext);
+                                  last_error_line = yylineno;
+                                }
+                                BEGIN(SKIPLINE);
+                                yylval.node = new_int_node("INT", yylineno, 0);
+                                return INT;
                             }
+<SKIPLINE>[^;\n]+    { }
+<SKIPLINE>";"        { BEGIN(INITIAL); yylval.node = new_token_node("SEMI", yylineno); return SEMI; }
+<SKIPLINE>\n         { BEGIN(INITIAL); }
+
 %%

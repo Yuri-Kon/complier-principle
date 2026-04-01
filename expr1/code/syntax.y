@@ -9,6 +9,7 @@
 extern int yylex(void);
 extern int yylineno;
 extern FILE* yyin;
+extern int last_error_line;
 
 TreeNode* root = NULL;
 int has_error = 0;
@@ -399,5 +400,8 @@ Exp
 
 void yyerror(const char* msg) {
     has_error = 1;
-    printf("Error type B at Line %d: %s.\n", yylineno, msg);
+    if (last_error_line != yylineno) {
+      printf("Error type B at Line %d: %s.\n", yylineno, msg);
+      last_error_line = yylineno;
+    }
 }
