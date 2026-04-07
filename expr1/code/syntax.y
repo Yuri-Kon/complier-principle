@@ -3,6 +3,11 @@
 }
 
 %{
+/*
+ * syntax.y 是实验一的语法分析核心。
+ * 它既要根据 C-- 文法判断输入是否有语法错误，
+ * 也要在无错时构造实验要求的语法树。
+ */
 #include <stdio.h>
 #include "tree.h"
 
@@ -15,6 +20,7 @@ TreeNode* root = NULL;
 int has_error = 0;
 
 void yyerror(const char* msg);
+/* 统一输出 Error type B，并避免同一行重复打印。 */
 static void report_type_b(int line, const char* msg) {
     has_error = 1;
     if (last_error_line != line) {
@@ -35,6 +41,7 @@ static int first_line(TreeNode* a, TreeNode* b, TreeNode* c, TreeNode* d) {
     return 0;
 }
 
+/* 用于恢复“if (...) x = 1 else ...”里缺失的分号。 */
 static TreeNode* make_exp_stmt(TreeNode* exp) {
     TreeNode* stmt = make_node("Stmt", first_line(exp, NULL, NULL, NULL));
     TreeNode* semi = new_token_node("SEMI", first_line(exp, NULL, NULL, NULL));
@@ -43,6 +50,7 @@ static TreeNode* make_exp_stmt(TreeNode* exp) {
     return stmt;
 }
 
+/* 用于恢复“a[5,3]”这类数组访问中的缺失右中括号。 */
 static TreeNode* make_array_access(TreeNode* base, TreeNode* index) {
     int line = first_line(base, index, NULL, NULL);
     TreeNode* exp = make_node("Exp", line);
@@ -63,6 +71,7 @@ static TreeNode* make_array_access(TreeNode* base, TreeNode* index) {
     TreeNode* node;
 }
 
+/* 词法单元与非终结符的属性值都统一使用 TreeNode*。 */
 %token<node> ID TYPE INT FLOAT 
 %token<node> SEMI COMMA ASSIGNOP RELOP
 %token<node> PLUS MINUS STAR DIV
@@ -74,6 +83,7 @@ static TreeNode* make_array_access(TreeNode* base, TreeNode* index) {
 %type <node> StmtList Stmt Exp Args
 %type <node> OptTag Tag
 
+/* 实验手册要求为表达式和 if-else 指定优先级与结合性。 */
 %right ASSIGNOP
 %left OR
 %left AND
@@ -88,6 +98,7 @@ static TreeNode* make_array_access(TreeNode* base, TreeNode* index) {
 
 %%
 
+/* ---------- 程序入口与顶层定义 ---------- */
 Program
     : ExtDefList
       {
@@ -111,6 +122,7 @@ ExtDefList
       }
     ;
 
+/* ExtDef 对应全局变量定义、结构体声明以及函数定义。 */
 ExtDef
     : Specifier ExtDecList SEMI
       {
@@ -142,6 +154,7 @@ ExtDef
       }
     ;
 
+/* ---------- 类型、声明子结构、函数头 ---------- */
 ExtDecList
     : VarDec
       {
@@ -249,6 +262,7 @@ ParamDec
       }
     ;
 
+/* ---------- 复合语句、局部定义、语句序列 ---------- */
 CompSt
     : LC DefList StmtList RC
       {
@@ -326,9 +340,10 @@ Dec
 		add_child($$, $1);
 		add_child($$, $2);
 		add_child($$, $3);
-	  }
-	;
+      }
+    ;
 
+/* VarDec 同时处理普通变量和数组声明。 */
 VarDec
     : ID
       {
@@ -354,6 +369,7 @@ VarDec
       }
     ;
 
+/* ---------- 语句 ---------- */
 StmtList
     : Stmt StmtList
       {
@@ -396,6 +412,7 @@ Stmt
       }
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE
       {
+          /* %prec LOWER_THAN_ELSE 用来消除悬空 else 冲突。 */
           $$ = make_node("Stmt", first_line($1, $2, $3, $4));
           add_child($$, $1);
           add_child($$, $2);
@@ -438,6 +455,7 @@ Stmt
       }
     | IF LP Exp RP Exp ELSE Stmt
       {
+          /* 样例中 else 前缺分号时，用定向恢复规则继续分析。 */
           report_type_b($6->line, "Missing \";\"");
           TreeNode* then_stmt = make_exp_stmt($5);
           $$ = make_node("Stmt", first_line($1, $2, $3, $4));
@@ -476,7 +494,7 @@ Stmt
     ;
 		
 
-
+/* ---------- 表达式 ---------- */
 Exp
     : ID
       {
@@ -570,6 +588,7 @@ Exp
       }
     | ID LP Args RP
       {
+          /* 函数调用本身也属于表达式。 */
           $$ = make_node("Exp", first_line($1, $2, $3, $4));
           add_child($$, $1);
           add_child($$, $2);
@@ -610,6 +629,7 @@ Exp
       }
     | Exp LB Exp COMMA Exp RB
       {
+          /* 样例中的 a[5,3] 应报 Missing "]"，再恢复成两次下标访问。 */
           report_type_b($4->line, "Missing \"]\"");
           TreeNode* first_index = make_array_access($1, $3);
           $$ = make_array_access(first_index, $5);
@@ -651,6 +671,7 @@ Exp
       }
     ;
 
+/* ---------- 实参列表 ---------- */
 Args
     : Exp COMMA Args
       {
@@ -668,5 +689,6 @@ Args
 %%
 
 void yyerror(const char* msg) {
+    /* 未被定向恢复覆盖的语法错误统一在这里输出。 */
     report_type_b(yylineno, msg);
 }

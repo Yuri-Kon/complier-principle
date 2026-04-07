@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* 所有结点最终都通过这个底层分配函数初始化。 */
 static TreeNode *alloc_node(const char *name, int line, int is_token) {
   TreeNode *p = (TreeNode *)malloc(sizeof(TreeNode));
   if (!p) {
@@ -57,6 +58,7 @@ TreeNode *new_float_node(const char *name, int line, float val) {
 }
 
 void add_child(TreeNode *parent, TreeNode *child) {
+  /* 空结点一般对应 epsilon 或错误恢复后的缺省分支，直接跳过。 */
   if (!parent || !child) {
     return;
   }
@@ -78,9 +80,15 @@ void print_tree(TreeNode *root, int indent) {
     return;
   }
 
+  /* 实验要求每深入一层缩进 2 个空格。 */
   for (int i = 0; i < indent; ++i) {
     putchar(' ');
   }
+
+  /*
+   * 非终结符输出“名字 + 行号”；
+   * 词法单元输出 token 名，如果是 ID / TYPE / INT / FLOAT 还要附带内容。
+   */
   if (!root->is_token) {
     printf("%s (%d)\n", root->name, root->line);
   } else {
@@ -95,6 +103,7 @@ void print_tree(TreeNode *root, int indent) {
     }
   }
 
+  /* 先序遍历：先打印自己，再依次打印所有孩子。 */
   TreeNode *c = root->child;
   while (c) {
     print_tree(c, indent + 2);

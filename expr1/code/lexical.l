@@ -1,6 +1,13 @@
 %option noyywrap yylineno noinput nounput
 
 %{
+/*
+ * lexical.l 负责把源文件字符流切分成 token。
+ * 这里除了基本 token 识别，还承担三件与实验要求直接相关的工作：
+ * 1. 构造语法树叶子结点；
+ * 2. 输出词法错误 Error type A；
+ * 3. 过滤注释、为语法分析阶段提供更干净的 token 流。
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,11 +15,17 @@
 #include "syntax.tab.h"
 #include "tree.h"
 
+/* Bison 开启 %locations 后，词法分析器也能共享位置信息类型。 */
 YYLTYPE yyloc;
   
+/* lexical_error 控制 main.c 是否打印语法树；last_error_line 防止同一行重复报错。 */
 int lexical_error = 0;
 int last_error_line = -1;
 
+/*
+ * 当前测试中既有 1.05e-4，也有 1.05e - 4。
+ * 为了兼容两种写法，这里在转换为数值前先去掉中间的空白字符。
+ */
 static float parse_float_literal(const char *text) {
   char buf[128];
   int j = 0;
@@ -28,20 +41,25 @@ static float parse_float_literal(const char *text) {
 
 %}
 
+/* COMMENT: 处理块注释；SKIPLINE: 发生词法错误后跳到本行末尾，避免重复报错。 */
 %x COMMENT SKIPLINE
 
+/* ---------- 基本词法模式 ---------- */
 DIGIT      [0-9]
 NZDIGIT    [1-9]
 LETTER     [A-Za-z_]
 IDN        {LETTER}({LETTER}|{DIGIT})*
 
+/* 十进制、八进制、十六进制整数。 */
 INT10      0|{NZDIGIT}{DIGIT}*
 OCT        0[0-7]+
 HEX        0[xX][0-9a-fA-F]+
 
+/* 选做要求：把非法八/十六进制直接识别出来并报 Error type A。 */
 BAD_OCT    0[0-9]*[89][0-9]*
 BAD_HEX    0[xX][0-9a-fA-F]*[g-zG-Z_][A-Za-z0-9_]*
 
+/* 选做要求：指数浮点数及其错误形式。 */
 FLOATNUM   ({DIGIT}+"."{DIGIT}*|{DIGIT}*"."{DIGIT}+)
 EXP        [eE][+-]?{DIGIT}+
 EXP_WS     [eE][ \t\r]*[+-]?[ \t\r]*{DIGIT}+
@@ -88,6 +106,7 @@ WS         [ \t\r]+
                                 if (last_error_line != yylineno) {
                                   printf("Error type A at Line %d: Illegal hexadecimal number \"%s\".\n", yylineno, yytext);
                                   last_error_line = yylineno;}
+                                /* 进入 SKIPLINE，跳过本行剩余内容。 */
                                 BEGIN(SKIPLINE);
                                 yylval.node = new_int_node("INT", yylineno, 0);
                             }
@@ -170,6 +189,7 @@ WS         [ \t\r]+
                                 BEGIN(INITIAL);
                                 return 0;
                             }
+
 <SKIPLINE>[^;\n]+    { }
 <SKIPLINE>";"        { BEGIN(INITIAL); yylval.node = new_token_node("SEMI", yylineno); return SEMI; }
 <SKIPLINE>\n         { BEGIN(INITIAL); }
