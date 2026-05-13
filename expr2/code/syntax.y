@@ -148,6 +148,10 @@ ExtDef
       }
     | Specifier FunDec SEMI
       {
+        /*
+         * 实验二选做 2.1：支持函数声明，例如 int func(int a);
+         * 这里只负责构造 AST，声明是否与定义一致由 semantic.c 检查。
+         */
         $$ = make_node("ExtDef", first_line($1, $2, $3, NULL));
         add_child($$, $1);
         add_child($$, $2);

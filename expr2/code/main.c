@@ -23,10 +23,16 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  /* 词法分析和语法分析都在 yyparse() 内部驱动完成。 */
+  /*
+   * yyparse() 会不断调用 yylex()，因此词法分析和语法分析都在这里完成。
+   * 若没有错误，syntax.y 会把 Program 根节点保存到全局变量 root。
+   */
   yyparse();
 
-  /* 实验二在语法树上执行语义分析；正确程序不输出任何内容。 */
+  /*
+   * 实验二不再打印语法树，而是在语法树上做语义分析。
+   * 如果前面已经出现词法/语法错误，root 可能不完整，此时跳过语义分析。
+   */
   if (!has_error && !lexical_error && root) {
     semantic_analyze(root);
   }
