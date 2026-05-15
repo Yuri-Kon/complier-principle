@@ -257,10 +257,15 @@ static int type_equal(Type *a, Type *b) {
   }
   switch (a->kind) {
   case TYPE_BASIC:
+    // Basic 分支只有两个，int 和 float, 这里比较是符合假设的
     return a->u.basic == b->u.basic;
   case TYPE_ARRAY:
+    // Array 类型只比较 elem, 数组元素类型
+    // 这里是递归比较
     return type_equal(a->u.array.elem, b->u.array.elem);
   case TYPE_STRUCT: {
+    // 比较字段数量和字段类型的顺序
+    // 这里是结构等价
     Field *fa = a->u.structure.fields;
     Field *fb = b->u.structure.fields;
     while (fa && fb) {
@@ -278,6 +283,10 @@ static int type_equal(Type *a, Type *b) {
   return 0;
 }
 
+/*
+ * 用于比较函数参数列表或实参列表。
+ * 逐个比较字段类型，不关心字段名
+ */
 static int fields_equal(Field *a, Field *b) {
   while (a && b) {
     if (!type_equal(a->type, b->type)) {
