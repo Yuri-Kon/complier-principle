@@ -15,7 +15,7 @@
         "aarch64-darwin"
       ];
 
-      forAllSystems = f: nixpkgs.lib.genAttrs systems (systems: f (import nixpkgs { inherit systems; }));
+      forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f (import nixpkgs { inherit systems; }));
     in
     {
       devShells = forAllSystems (pkgs: {
