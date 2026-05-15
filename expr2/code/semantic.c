@@ -17,6 +17,7 @@
  * 的 imperative style：进入作用域时新建 Scope，离开作用域时删除本层变量。
  */
 #define HASH_SIZE 16384
+// 定义哈希桶数量
 
 typedef struct Type Type;
 typedef struct Field Field;
@@ -82,13 +83,15 @@ struct Function {
   char *name;
   Type *ret;
   Field *params;
-  int param_count;
-  int defined;
+  int param_count; // 检查函数是否多次声明或是否与定义一致
+  int defined;     // 表示函数是否有定义
   int decl_line;
   Function *next;
 };
 
-/* 结构体名表。结构体变量的字段类型保存在 type 中。 */
+/* 结构体名表。结构体变量的字段类型保存在 type 中。
+ * 结构体是全局命名空间，所以用普通链表即可
+ */
 struct StructSymbol {
   char *name;
   Type *type;
@@ -134,7 +137,7 @@ static void *xmalloc(size_t size) {
   return p;
 }
 
-/* strdup 不是 C 标准库函数的一部分，这里自己实现以保持可移植。 */
+/* strdup 不是 C 标准库函数的一部分，这里自己实现。 */
 static char *xstrdup(const char *s) {
   size_t len = strlen(s) + 1;
   char *p = (char *)xmalloc(len);
