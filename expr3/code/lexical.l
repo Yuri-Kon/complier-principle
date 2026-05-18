@@ -81,7 +81,7 @@ WS         [ \t\r]+
 ";"                         { yylval.node = new_token_node("SEMI", yylineno); return SEMI; }
 ","                         { yylval.node = new_token_node("COMMA", yylineno); return COMMA; }
 "="                         { yylval.node = new_token_node("ASSIGNOP", yylineno); return ASSIGNOP; }
-"=="|"!="|">="|"<="|">"|"<" { yylval.node = new_token_node("RELOP", yylineno); return RELOP; }
+"=="|"!="|">="|"<="|">"|"<" { yylval.node = new_type_node("RELOP", yylineno, yytext); return RELOP; }
 "+"                         { yylval.node = new_token_node("PLUS", yylineno); return PLUS; }
 "-"                         { yylval.node = new_token_node("MINUS", yylineno); return MINUS; }
 "*"                         { yylval.node = new_token_node("STAR", yylineno); return STAR; }

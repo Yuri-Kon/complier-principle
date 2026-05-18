@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -std=gnu11
 
 all: cc
 
-cc: lex.yy.c syntax.tab.c tree.c semantic.c main.c
+cc: lex.yy.c syntax.tab.c tree.c semantic.c ir.c translate.c main.c
 	$(CC) $(CFLAGS) -o $@ $^ -lfl
 
 syntax.tab.c syntax.tab.h: syntax.y

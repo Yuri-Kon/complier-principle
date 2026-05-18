@@ -1,5 +1,6 @@
 #include "tree.h"
 #include "semantic.h"
+#include "translate.h"
 #include <stdio.h>
 
 /* 这些全局变量由 Flex/Bison 生成或在 syntax.y 中定义。 */
@@ -10,9 +11,9 @@ extern int has_error;
 extern int lexical_error;
 
 int main(int argc, char **argv) {
-  // 程序接收一个源文件路径作为唯一参数
-  if (argc != 2) {
-    fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+  // 实验三接收源文件路径和中间代码输出路径两个参数。
+  if (argc != 3) {
+    fprintf(stderr, "Usage: %s <input_file> <output_file>\n", argv[0]);
     return 1;
   }
 
@@ -35,6 +36,20 @@ int main(int argc, char **argv) {
    */
   if (!has_error && !lexical_error && root) {
     semantic_analyze(root);
+    /*
+     * 实验三输入通常假设无错，但这里仍保留实验二的错误检查。
+     * 只有语义分析完全通过时才生成 IR，避免把不完整 AST 翻译成错误中间代码。
+     */
+    if (semantic_error_count() == 0) {
+      FILE *out = fopen(argv[2], "w");
+      if (!out) {
+        perror(argv[2]);
+        fclose(yyin);
+        return 1;
+      }
+      translate_program(root, out);
+      fclose(out);
+    }
   }
 
   fclose(yyin);

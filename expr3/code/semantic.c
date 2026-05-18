@@ -125,6 +125,8 @@ static NameItem *seen_vars = NULL;
 static Type *int_type = NULL;
 static Type *float_type = NULL;
 static Type *error_type = NULL;
+/* semantic_errors 用于实验三：语义正确时才允许进入中间代码生成。 */
+static int semantic_errors = 0;
 
 /* 带错误检查的内存分配，统一清零，减少字段遗漏初始化的问题。 */
 static void *xmalloc(size_t size) {
@@ -190,6 +192,7 @@ static TreeNode *find_child(TreeNode *node, const char *name) {
 
 /* 统一语义错误输出格式。说明文字可以不同，但类型号和行号必须正确。 */
 static void semantic_error(int type, int line, const char *msg) {
+  ++semantic_errors;
   printf("Error type %d at Line %d: %s.\n", type, line, msg);
 }
 
@@ -1267,6 +1270,18 @@ static void check_undefined_functions(void) {
 }
 
 /*
+ * 实验三要求预定义 read/write：
+ * - read(): int，对应 IR 的 READ；
+ * - write(int): int，对应 IR 的 WRITE，返回值固定为 0。
+ * 预先加入函数表后，语义分析可像普通函数一样检查调用是否合法。
+ */
+static void add_builtin_functions(void) {
+  add_function("read", int_type, NULL, 1, 0);
+  Field *write_params = new_field("x", int_type, 0);
+  add_function("write", int_type, write_params, 1, 0);
+}
+
+/*
  * 语义分析入口。
  * 初始化所有全局状态和三个基础类型，然后创建全局作用域并遍历 Program。
  */
@@ -1277,12 +1292,16 @@ void semantic_analyze(TreeNode *root) {
   functions = NULL;
   structs = NULL;
   seen_vars = NULL;
+  semantic_errors = 0;
   int_type = new_basic_type(BASIC_INT);
   float_type = new_basic_type(BASIC_FLOAT);
   error_type = new_type(TYPE_ERROR);
+  add_builtin_functions();
 
   push_scope();
   analyze_ext_def_list(child_at(root, 0));
   check_undefined_functions();
   pop_scope();
 }
+
+int semantic_error_count(void) { return semantic_errors; }

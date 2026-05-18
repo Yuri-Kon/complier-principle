@@ -4,17 +4,14 @@ set -euo pipefail
 make clean
 make
 
-echo "===== Basic Tests: 17 ====="
-for f in ./test/test_[0-9][0-9]_*.cmm; do
+echo "===== Project 3 Tests ====="
+for f in ./test/test*.cmm; do
   echo
   echo ">>> $f"
-  ./cc "$f" || true
-done
-
-echo
-echo "===== Optional Tests: 6 ====="
-for f in ./test/test_optional_[0-9][0-9]_*.cmm; do
-  echo
-  echo ">>> $f"
-  ./cc "$f" || true
+  base="$(basename "${f%.cmm}")"
+  out="./test/${base}.ir"
+  ./cc "$f" "$out" || true
+  if [[ -f "$out" ]]; then
+    sed -n '1,200p' "$out"
+  fi
 done
