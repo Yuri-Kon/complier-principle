@@ -66,13 +66,13 @@ static TreeNode* make_array_access(TreeNode* base, TreeNode* index) {
 
 
 %locations
-    
+
 %union {
     TreeNode* node;
 }
 
 /* 词法单元与非终结符的属性值都统一使用 TreeNode*。 */
-%token<node> ID TYPE INT FLOAT 
+%token<node> ID TYPE INT FLOAT
 %token<node> SEMI COMMA ASSIGNOP RELOP
 %token<node> PLUS MINUS STAR DIV
 %token<node> AND OR DOT NOT
@@ -114,7 +114,7 @@ ExtDefList
         $$ = make_node("ExtDefList", first_line($1, $2, NULL, NULL));
         add_child($$, $1);
         add_child($$, $2);
-        
+
       }
     | /* empty */
       {
@@ -185,7 +185,7 @@ Specifier
     : TYPE
       {
         $$ = make_node("Specifier", first_line($1, NULL, NULL, NULL));
-        add_child($$, $1);  
+        add_child($$, $1);
       }
     | StructSpecifier
       {
@@ -503,7 +503,7 @@ Stmt
           yyerror("syntax error");
       }
     ;
-		
+
 
 /* ---------- 表达式 ---------- */
 Exp
