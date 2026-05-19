@@ -118,7 +118,7 @@ static void *xmalloc(size_t size) {
   return p;
 }
 
-/* 本文件不依赖非标准 strdup，保持在助教环境中的可移植性。 */
+/* 本文件不依赖非标准 strdup */
 static char *xstrdup(const char *s) {
   size_t len = strlen(s) + 1;
   char *p = (char *)xmalloc(len);
