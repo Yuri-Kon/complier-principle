@@ -10,10 +10,11 @@
  * - 生成阶段只做尾插，保持翻译顺序；
  * - 输出阶段顺序遍历即可；
  * - 相比边翻译边 fprintf，后续若需要做简单优化或删除冗余代码，也有调整空间。
- // */
+ */
+// 每一个 IrLine 节点代表一行 IR
 typedef struct IrLine {
-  char *text;
-  struct IrLine *next;
+  char *text; // text 保存这一行到字符串内容
+  struct IrLine *next; // next 指向下一行 IR
 } IrLine;
 
 static IrLine *head = NULL;

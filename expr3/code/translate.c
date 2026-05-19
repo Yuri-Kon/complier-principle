@@ -207,6 +207,9 @@ static Field *new_field(const char *name, Type *type) {
  */
 static int type_size(Type *type) {
   if (!type) {
+      // 这里是防御性返回。一般情况下 type 的类型不会出现 NULL ，
+      // 这里是当出现这种情况时
+      // 防御性返回基本宽类型以保证后续处理
     return 4;
   }
   switch (type->kind) {
@@ -381,6 +384,7 @@ static Type *var_dec_type(TreeNode *node, Type *base, char **name) {
 }
 
 /*
+ * 结构体字段偏移
  * 将结构体内的 DefList 转为字段链表，并计算每个字段的字节偏移。
  * 这里假设语义分析已经处理了字段重名和非法初始化，翻译阶段只关注布局。
  */
